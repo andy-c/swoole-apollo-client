@@ -1,0 +1,24 @@
+{
+	"name": "andy-c/php-apollo-client",
+    "type": "library",
+    "keywords": [
+        "apollo php client"
+    ],
+    "license": "MIT",
+    "description": "A php apollo client",
+    "authors": [
+        {
+            "name": "andy-c",
+            "email": "cylbdda@gmail.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "ApolloService\\": "src/"
+        }
+    }
+}
