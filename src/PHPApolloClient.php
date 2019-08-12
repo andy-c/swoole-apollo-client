@@ -14,10 +14,10 @@ class PHPApolloClient
 
 	//process type
 	private static $processList = [
-		// "Timer"=>[
-	 //        "process_name" => "apollo-timer-process",
-	 //        "process_type" => "timer",
-	 //    ],
+		"Timer"=>[
+	        "process_name" => "apollo-timer-process",
+	        "process_type" => "timer",
+	    ],
 	    "Listen"=>[
 	    	"process_name" => "apollo-listen-process",
 	    	"process_type"=>"listen"
@@ -35,6 +35,14 @@ class PHPApolloClient
    const APL_STOP_STATUS = 1;
    //running
    const APL_RUNNING_STATUS = 2;
+   
+   //event loop
+   private static $eventLoop =null;
+   
+   //timer event
+   const TIMER_EVENT=256;
+   //signal event
+   const SIGNAL_EVENT=1024;
     
     //check env
    public static function init(){
@@ -135,8 +143,28 @@ class PHPApolloClient
    	   pcntl_signal(SIGUSR2,[self::class,"handleSignal"],false);
 	}
 
+	//add event loop
+	public static function initEventLoop(){
+		self::$eventLoop = new Ev();
+	}
+
+	//handle the child signal
+	public static function loadChildSignal(){
+	   pcntl_signal(SIGINT,SIG_IGN,false);
+   	   pcntl_signal(SIGTERM,SIG_IGN,false);
+   	   pcntl_signal(SIGQUIT,SIG_IGN,false);
+   	   pcntl_signal(SIGUSR1,SIG_IGN,false);
+   	   pcntl_signal(SIGUSR2,SIG_IGN,false);
+   	   self::$eventLoop->addEvents(1024,["callback" =>[self::class,"handleSignal"],"signum"=>SIGINT]);
+   	   self::$eventLoop->addEvents(1024,["callback" =>[self::class,"handleSignal"],"signum"=>SIGTERM]);
+   	   self::$eventLoop->addEvents(1024,["callback" =>[self::class,"handleSignal"],"signum"=>SIGQUIT]);
+   	   self::$eventLoop->addEvents(1024,["callback" =>[self::class,"handleSignal"],"signum"=>SIGUSR1]);
+   	   self::$eventLoop->addEvents(1024,["callback" =>[self::class,"handleSignal"],"signum"=>SIGUSR2]);
+	}
+
 	//handle the signal
 	public static function handleSignal($signo){
+		  $signo = $signo instanceof \EvSignal ? $signo->signum:$signo;
           switch ($signo) {
           	case SIGUSR1:
           	case SIGUSR2:
@@ -177,28 +205,23 @@ class PHPApolloClient
 			//record
 			self::$childPid[posix_getpid()] = $process;
 			//子进程也要安装信号
-			self::loadSignal();
+			self::loadChildSignal();
 			//记录log
 			register_shutdown_function([self::class,"recordErrorLog"]);
-			while(1){
-				pcntl_signal_dispatch();
-				//listen the apollo client
-				if($process["process_type"] == "listen"){
-					try{
-						ApolloEntity::init()->listenChange();
-					}catch(\Throwable $ex){
-						self::writeLog($ex->getMessage().'in'.$ex->getFile()."on".$ex->getLine());
-						exit(100);
-					}
-					//timer process                    
-				}else if($process['process_type'] == "timer"){
-					  try{
-                        ApolloEntity::init()->getApolloInfoInTimer();
-					  }catch(\Throwable $ex){
-					  	 self::writeLog($ex->getMessage().'in'.$ex->getFile()."on".$ex->getLine());
-						 exit(100);
-					  }
+		
+		    try{
+				if($process['process_type'] == 'timer'){
+					self::$eventLoop->addEvents(self::TIMER_EVENT,["after"=>1,"repeat"=>180,"callback"=>function(){
+						ApolloEntity::init()->getApolloInfoInTimer();
+					}]);
 				}
+				//call eventloop
+				self::$eventLoop->loop();
+				if($process['process_type'] == "listen"){
+					ApolloEntity::init()->listenChange();
+				}
+			}catch(\Throwable $ex){
+				self::writeLog($ex->getMessage().'in'.$ex->getFile()."on".$ex->getLine());
 			}
 		}else{
 			throw new \Exception("fork failed !",100004);
@@ -233,6 +256,11 @@ class PHPApolloClient
 	//workStop
 	public static function processStop(){
 		$pid = posix_getpid();
+		//timer process needs to delete the timer loop
+		if(self::$childPid[$pid]['process_type'] == "timer"){
+            self::$eventLoop->delEvents(self::TIMER_EVENT);
+		}
+		self::$eventLoop->delEvents(self::SIGNAL_EVENT);
 		self::writelog(self::$childPid[$pid]['process_name']." has been stoped");
 		exit(0);
 	}
@@ -306,6 +334,7 @@ class PHPApolloClient
 		self::init();
 		self::handleCommand();
 		self::deamonise();
+		self::initEventLoop();
 		self::savePidToFile();
 		self::loadSignal();
 		self::createProcess();

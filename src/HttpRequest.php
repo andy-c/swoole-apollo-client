@@ -39,19 +39,19 @@ class HttpRequest
 	public function HttpMultiDoGet($options){
 		if(empty($options)) return [];
 		$multi_ch = curl_multi_init();
-        //request list
-        $request_list = [];
+    //request list
+    $request_list = [];
 		foreach($options as $key => $val){
 			$ch = curl_init();
 			curl_setopt_array($ch,[
 				CURLOPT_URL=>$val['url'],
-				CURLOPT_TIMEOUT=>isset($val['timeout'])?$val['timeou']:10,
+				CURLOPT_TIMEOUT=>isset($val['timeout'])?$val['timeout']:10,
 				CURLOPT_RETURNTRANSFER=>1,
 				CURLOPT_HEADER=>false
 			]);
-            $request_list[$val['namespace']] =[];
-            $request_list[$val['namespace']]['ch'] = $ch;
-            curl_multi_add_handle($multi_ch, $ch);
+      $request_list[$val['namespace']] =[];
+      $request_list[$val['namespace']]['ch'] = $ch;
+      curl_multi_add_handle($multi_ch, $ch);
 		}
 
 		//do request

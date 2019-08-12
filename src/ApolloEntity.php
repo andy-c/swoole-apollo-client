@@ -132,42 +132,56 @@ class ApolloEntity
     * 定时拉取更新数据
     */
    public function listenChange(){
-      $url = rtrim($this->config_server_url,"/")."/notifications/v2?";
-      $params['appId'] = $this->appId;
-      $params['cluster'] = $this->clusterName;
-      $params['notifications'] = json_encode(array_values($this->notifications));
-      $url.=http_build_query($params);
-      $response = HttpRequest::HttpDoGet(['url'=>$url,"timeout"=>$this->intervalTimeout]);
-      if($response['httpCode'] == 200){
-           $result = json_decode($response['content'],true);
-           $changelist = [];
-           foreach($result as $k => $v){
-           	  if($v['notificationId']!= $this->notifications[$v['namespaceName']]['notificationId']){
-           	  	  $changelist[$v['namespaceName']] = ['namespace'=>$v['namespaceName'],'url'=>rtrim($this->config_server_url,"/")."/configs/".$this->appId."/".$this->clusterName."/".$v['namespaceName'],"notificationId" => $v['notificationId']];
-           	  }
-           }
-           //獲取最新的更新明細
-           $response = $this->getAllNameSpaceInfo($changelist);
-           if(!empty($response)){
-           	  foreach($response as $key => $val){
-           	  	 if($val){
-           	  	 	$this->notifications[$key]['notificationId'] =$changelist[$key]['notificationId']; 
-                 }
-           	  }
-           }
-           //是否回调用户空间
-           ($this->userCallBack instanceof \Closure) && call_user_func($this->userCallBack);
+      while(1){
+          $url = rtrim($this->config_server_url,"/")."/notifications/v2?";
+          $params['appId'] = $this->appId;
+          $params['cluster'] = $this->clusterName;
+          $params['notifications'] = json_encode(array_values($this->notifications));
+          $url.=http_build_query($params);
+          $response = HttpRequest::HttpDoGet(['url'=>$url,"timeout"=>$this->intervalTimeout]);
+          if($response['httpCode'] == 200){
+               $result = json_decode($response['content'],true);
+               $changelist = [];
+               foreach($result as $k => $v){
+                  if($v['notificationId']!= $this->notifications[$v['namespaceName']]['notificationId']){
+                      $changelist[$v['namespaceName']] = ['namespace'=>$v['namespaceName'],'url'=>rtrim($this->config_server_url,"/")."/configs/".$this->appId."/".$this->clusterName."/".$v['namespaceName'],"notificationId" => $v['notificationId']];
+                  }
+               }
+               //獲取最新的更新明細
+               $response = $this->getAllNameSpaceInfo($changelist);
+               if(!empty($response)){
+                  foreach($response as $key => $val){
+                     if($val){
+                      $this->notifications[$key]['notificationId'] =$changelist[$key]['notificationId']; 
+                     }
+                  }
+               }
+               //是否回调用户空间
+               ($this->userCallBack instanceof \Closure) && call_user_func($this->userCallBack);
 
-      }else{
-          $this->saveLog("pull the notifications failed! run again","listen-process");
+          }else{
+              $this->saveLog("pull the notifications failed! run again","listen-process");
+          }
       }
    }
 
    /**
-    * 定时拉取数据
+    * 定时拉取全量的数据
     */
    public function getApolloInfoInTimer(){
-      //to do list
+      if(!empty($this->notifications)){
+           $allNameSpaceInfo = [];
+           foreach($this->notifications as $k => $v){
+                $allNameSpaceInfo[$k]['url'] = rtrim($this->config_server_url,"/")."/configs/".$this->appId."/".$this->clusterName."/".$v['namespaceName'];
+                $allNameSpaceInfo[$k]['timeout'] = 10;
+           }
+           $response = $this->getAllNameSpaceInfo($allNameSpaceInfo);
+           $this->saveLog("application info are ".var_export($response,true));
+           //如果设置回调，则调用
+           if($response){
+              ($this->userCallBack instanceof \Closure) && call_user_func($this->userCallBack);
+           }
+      }
    }
 
    /**
