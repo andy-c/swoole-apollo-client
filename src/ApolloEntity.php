@@ -176,10 +176,11 @@ class ApolloEntity
                 $allNameSpaceInfo[$k]['timeout'] = 10;
            }
            $response = $this->getAllNameSpaceInfo($allNameSpaceInfo);
-           $this->saveLog("application info are ".var_export($response,true));
            //如果设置回调，则调用
            if($response){
               ($this->userCallBack instanceof \Closure) && call_user_func($this->userCallBack);
+           }else{
+              $this->saveLog("pull the apollo info failed!","timer-process");
            }
       }
    }
