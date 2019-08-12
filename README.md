@@ -1,3 +1,5 @@
-#php-apollo-client
+# php-apollo-client
+ 
+ 获取apollo上服务的配置信息
 
-## timer process will be added next time
+ 定义两个进程，一个定时进程，一个监听进程，定时进程会定时全量来去配置信息，并保存到文件中，监听进程会实时拉取配置信息。
