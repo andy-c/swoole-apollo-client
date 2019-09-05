@@ -76,6 +76,7 @@ class PHPApolloClient
 
         switch ($argv[1]) {
         	case 'start':
+        	    self::checkIsRunning();
         	    self::writeLog("php-apollo-client is starting");
         	    self::$run_status = self::APL_STARTING_STATUS;
         		break;
@@ -204,25 +205,20 @@ class PHPApolloClient
 			}
 			//record
 			self::$childPid[posix_getpid()] = $process;
-			//子进程也要安装信号
-			self::loadChildSignal();
 			//记录log
 			register_shutdown_function([self::class,"recordErrorLog"]);
 		
 		    try{
 				if($process['process_type'] == 'timer'){
-					self::$eventLoop->addEvents(self::TIMER_EVENT,["after"=>1,"repeat"=>180,"callback"=>function(){
-						ApolloEntity::init()->getApolloInfoInTimer();
-					}]);
-				}
-				//call eventloop
-				self::$eventLoop->loop();
-				if($process['process_type'] == "listen"){
-					ApolloEntity::init()->listenChange();
+					self::runTimer();
+				}else if($process['process_type'] == "listen"){
+					self::runListen();
 				}
 			}catch(\Throwable $ex){
 				self::writeLog($ex->getMessage().'in'.$ex->getFile()."on".$ex->getLine());
 			}
+			//退出事件循环
+			exit("quit eventloop");
 		}else{
 			throw new \Exception("fork failed !",100004);
 		}
@@ -328,7 +324,37 @@ class PHPApolloClient
                  self::writeLog($errMsg);
         }
 	}
+
+	//check is running
+	public static function checkIsRunning(){
+		$pid = file_get_contents(self::$pidfile);
+		if($pid){
+			exit("php-apollo-client has already started\n");
+		}
+
+		return true;
+	}
+
+	//run timer process
+	public static function runTimer(){
+		self::loadChildSignal();
+		self::$eventLoop->addEvents(self::TIMER_EVENT,['after'=>1,'repeat'=>120,"callback"=>function(){
+             ApolloEntity::init()->getApolloInfoInTimer();
+		}]);
+
+		self::$eventLoop->loop();
+	}
     
+    //run listen process
+    public static function runListen(){
+    	self::loadSignal();
+    	while(1){
+    		pcntl_signal_dispatch();
+    		ApolloEntity::init()->listenChange();
+    	}
+    	
+    }
+
 	//run php-apollo-client
 	public static function run(){
 		self::init();
