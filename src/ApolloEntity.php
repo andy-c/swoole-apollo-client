@@ -99,7 +99,7 @@ class ApolloEntity
    /**
     * 批量获取apollo配置
     */
-   public function getAllNameSpaceInfo(array $configs) : array{
+   public function getAllNameSpaceInfo(array $configs,string $process_name ="none") : array{
        if(!$configs) return [];
        $response_list = HttpRequest::HttpMultiDoGet($configs);
        if(!empty($response_list)){
@@ -120,7 +120,7 @@ class ApolloEntity
        	  	  }else if($resp['httpCode'] == 304){
        	  	  	//nothing to change
        	  	  }else{
-       	  	  	 $this->saveLog("pull failed!");
+       	  	  	 $this->saveLog("pull failed!",$process_name);
        	  	  }
        	  }
        }
@@ -146,7 +146,7 @@ class ApolloEntity
               }
            }
            //獲取最新的更新明細
-           $response = $this->getAllNameSpaceInfo($changelist);
+           $response = $this->getAllNameSpaceInfo($changelist,"listen-process");
            if(!empty($response)){
               foreach($response as $key => $val){
                  if($val){
@@ -174,7 +174,7 @@ class ApolloEntity
                 $allNameSpaceInfo[$k]['namespace'] = $v['namespaceName'];
            }
 
-           $response = $this->getAllNameSpaceInfo($allNameSpaceInfo);
+           $response = $this->getAllNameSpaceInfo($allNameSpaceInfo,"timer-process");
            //如果设置回调，则调用
            if($response){
               ($this->userCallBack instanceof \Closure) && call_user_func($this->userCallBack);

@@ -43,6 +43,8 @@ class PHPApolloClient
    const TIMER_EVENT=256;
    //signal event
    const SIGNAL_EVENT=1024;
+   //peridoc event
+   const IDLE = 8192;
     
     //check env
    public static function init(){
@@ -207,16 +209,22 @@ class PHPApolloClient
 			self::$childPid[posix_getpid()] = $process;
 			//记录log
 			register_shutdown_function([self::class,"recordErrorLog"]);
-		
+		    //子进程需要安装信号
+		    self::loadChildSignal();
 		    try{
 				if($process['process_type'] == 'timer'){
-					self::runTimer();
+					self::$eventLoop->addEvents(self::TIMER_EVENT,['after'=>1,'repeat'=>120,"callback"=>function(){
+                            ApolloEntity::init()->getApolloInfoInTimer();
+		            }]);
 				}else if($process['process_type'] == "listen"){
-					self::runListen();
+					self::$eventLoop->addEvents(self::IDLE,["callback"=>function(){
+						   ApolloEntity::init()->listenChange();
+					}]);
 				}
 			}catch(\Throwable $ex){
 				self::writeLog($ex->getMessage().'in'.$ex->getFile()."on".$ex->getLine());
 			}
+			self::$eventLoop->loop();
 			//退出事件循环
 			exit("quit eventloop");
 		}else{
@@ -255,6 +263,8 @@ class PHPApolloClient
 		//timer process needs to delete the timer loop
 		if(self::$childPid[$pid]['process_type'] == "timer"){
             self::$eventLoop->delEvents(self::TIMER_EVENT);
+		}else{
+            self::$eventLoop->delEvents(self::IDLE);
 		}
 		self::$eventLoop->delEvents(self::SIGNAL_EVENT);
 		self::writelog(self::$childPid[$pid]['process_name']." has been stoped");
@@ -270,7 +280,7 @@ class PHPApolloClient
 		self::writeLog("send kill signal to master");
 		$killMaster = posix_kill($masterPid,SIGTERM);
 		self::writeLog("kill master result is ".var_export($killMaster,true));
-		$timeout = 10;
+		$timeout = 60;
 		$start_time = time();
 		while(1){
 			$master_status = posix_kill($masterPid, 0);
@@ -334,26 +344,6 @@ class PHPApolloClient
 
 		return true;
 	}
-
-	//run timer process
-	public static function runTimer(){
-		self::loadChildSignal();
-		self::$eventLoop->addEvents(self::TIMER_EVENT,['after'=>1,'repeat'=>120,"callback"=>function(){
-             ApolloEntity::init()->getApolloInfoInTimer();
-		}]);
-
-		self::$eventLoop->loop();
-	}
-    
-    //run listen process
-    public static function runListen(){
-    	self::loadSignal();
-    	while(1){
-    		pcntl_signal_dispatch();
-    		ApolloEntity::init()->listenChange();
-    	}
-    	
-    }
 
 	//run php-apollo-client
 	public static function run(){
