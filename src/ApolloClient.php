@@ -9,6 +9,7 @@ use Swoole\Process\Pool;
 use Swoole\Coroutine;
 use Swoole\Process;
 use Throwable;
+use Swoole\Server;
 use function register_shutdown_function;
 use function error_get_last;
 
@@ -97,12 +98,11 @@ class ApolloClient
             //init pool
             $this->pool = new Pool($this->workerNum,0,0,true);
             //set config
-            $this->pool->set([
+            Coroutine::set([
                 'hook_flags' => SWOOLE_HOOK_FILE,
                 'max_coroutine' =>3000,
                 'stack_size' => 4096,
                 'log_level'  =>SWOOLE_LOG_ERROR,
-                'log_file'   => SWOOLE_LOG_FILE,
                 'socket_connect_timeout' => 10,
                 'socket_timeout' =>10,
                 'dns_server' =>'8.8.8.8',
@@ -157,6 +157,7 @@ class ApolloClient
         //handler signal
         process::signal(\SIGTERM,function($signo){
             Helper::getLogger()->error("process has been killed by signo ".$signo);
+            exit(0);
         });
     }
 }
