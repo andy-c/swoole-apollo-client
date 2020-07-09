@@ -1,3 +1,4 @@
 vendor
 docker-compose.yml
 run.sh
+.idea
