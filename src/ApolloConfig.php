@@ -138,7 +138,7 @@ class ApolloConfig implements ConfigCenterInterface
             ];
 
             $result = $this->request->request('/notifications/v2', $options, $timeout,$host,$port);
-            Helper::getLogger()->info("listenrequest result are ".json_encode($result));
+
             if (empty($result)) {
                 continue;
             }
