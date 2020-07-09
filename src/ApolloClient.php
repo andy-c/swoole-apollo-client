@@ -102,6 +102,7 @@ class ApolloClient
                 'max_coroutine' =>3000,
                 'stack_size' => 4096,
                 'log_level'  =>SWOOLE_LOG_ERROR,
+                'log_file'   => SWOOLE_LOG_FILE,
                 'socket_connect_timeout' => 10,
                 'socket_timeout' =>10,
                 'dns_server' =>'8.8.8.8',
