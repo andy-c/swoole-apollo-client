@@ -83,7 +83,7 @@ class ApolloClient
      * worker stop
     */
     private function onWorkerStop($pool,$workerId) :void{
-        if($workerId){
+        if($workerId==0){
             Helper::getLogger()->info("long_pull process has exited ");
         }else{
             Helper::getLogger()->info( "cron_process has exited ");
