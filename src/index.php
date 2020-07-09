@@ -13,7 +13,7 @@ define("SWOOLE_LOG_FILE","/opt/apollo/swoole_log_file.log");
 
 //isntance apolloInfo and apolloRequset
 $apollo = new ApolloInfo();
-$apollo->setHost("127.0.0.1");
+$apollo->setHost("apollo.test.com");
 $apollo->setPort("8090");
 $apolloRequest = new ApolloRequest();
 $apolloConfig = new ApolloConfig($apollo,$apolloRequest);
