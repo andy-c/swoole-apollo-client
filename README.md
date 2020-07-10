@@ -2,9 +2,9 @@
  
 ## 简介
 
-swoole-apollo-client 是一款基于swoole process是实现的携程apollo客户端，继承了swoole携程的高性能特征
+swoole-apollo-client 是一款基于swoole process是实现的携程apollo客户端，继承了swoole协程的高性能特征
 采用两个进程，一个实时监听，一个定时更新，互不影响，实现配置更新的稳定运行
-可以结合swoole_server & systemd & supervisor 来实现长期运行，自动重启
+默认采用守护进程的方式，可以结合swoole_server & systemd & supervisor 来实现长期运行，自动重启
 
 
 ## 功能
