@@ -6,6 +6,7 @@ namespace ApolloService;
 use ApolloService\Contract\ConfigCenterInterface;
 use ApolloService\Helper\Helper;
 use Swoole\Timer;
+use Swoole\Coroutine\System;
 use function sprintf;
 use function apcu_store;
 
@@ -185,7 +186,7 @@ class ApolloConfig implements ConfigCenterInterface
             }
             $updateConfigs = $this->pullBatch($updateNamespaceNames, $clientip);
             //update file and cache
-            $this->updateFileAndCache($updateConfigs);
+            $this->updateFileAndCache($updateConfigs,'listen');
             //user callback
             if($callback) {$callback($updateConfigs);}
         }
@@ -197,6 +198,7 @@ class ApolloConfig implements ConfigCenterInterface
     */
     public function Timer():void {
         $callback = $this->apolloInfo->getCallback();
+        $this->running = true; //start to run
         $this->tickId = Timer::tick($this->apolloInfo->getTimer(),function() use ($callback){
             if(!$this->running){
                 Timer::clear($this->tickId);
@@ -210,7 +212,6 @@ class ApolloConfig implements ConfigCenterInterface
             $notifications = $this->apolloInfo->getNotifications();
             $clientip = $this->apolloInfo->getClientip();
             $timeout = $this->apolloInfo->getHoldTimeout();
-            $this->running = true;//start to run
 
             // Client ip and release key
             $query['appId']   = $appid;
@@ -252,7 +253,7 @@ class ApolloConfig implements ConfigCenterInterface
             }
             $updateConfigs = $this->pullBatch($updateNamespaceNames, $clientip);
             //update file and cache
-            $this->updateFileAndCache($updateConfigs);
+            $this->updateFileAndCache($updateConfigs,"timer");
             //user callback
             if($callback) {$callback($updateConfigs);}
         });
@@ -275,8 +276,8 @@ class ApolloConfig implements ConfigCenterInterface
         if(!is_dir($dir)){
             mkdir($dir,0777,true);
         }
-        $length = file_put_contents($configFile.'.tmp',$content,LOCK_EX);
-        if(strlen($content) == $length){
+        $res = System::writeFile($configFile.'.tmp',$content);
+        if($res){
             return copy($configFile.'.tmp',$configFile) && unlink($configFile.'.tmp');
         }else{
             return false;
@@ -288,7 +289,7 @@ class ApolloConfig implements ConfigCenterInterface
     */
     private function getConfigPath(string $namespaceName):string{
         return FILE_DIR.DIRECTORY_SEPARATOR.$this->apolloInfo->getAppId().'_'.
-            'apollo_cache_'.$namespaceName.'.json';
+            $this->apolloInfo->getClusterName().'_apollo_cache_'.$namespaceName.'.json';
     }
 
     /**
@@ -298,7 +299,7 @@ class ApolloConfig implements ConfigCenterInterface
         $file = $this->getConfigPath($namespaceName);
         $config = [];
         if(file_exists($file)){
-            $content = file_get_contents($file);
+            $content = System::readFile($file);
             $config = $content ? json_decode($content,true) :[];
         }
         return $config;
@@ -320,7 +321,7 @@ class ApolloConfig implements ConfigCenterInterface
      * update file and cache
      * for cache pls use apcu store
     */
-    private function updateFileAndCache(array $updateConfigs):void{
+    private function updateFileAndCache(array $updateConfigs,string $type):void{
        $res =[];
        foreach($updateConfigs as $key => $val){
            $fileRes = $this->setConfigToFile($val['namespaceName'],@json_encode($val['configurations']));
@@ -328,7 +329,7 @@ class ApolloConfig implements ConfigCenterInterface
            $res[$val['namespaceName']]['file'] = $fileRes;
            $res[$val['namespaceName']]['cache'] = $cacheRes;
        }
-       Helper::getLogger()->info("update file and cache result ".json_encode($res).' at time '.date('Y-m-d H:i:s'));
+       Helper::getLogger()->info("$type update file and cache result ".json_encode($res).' at time '.date('Y-m-d H:i:s'));
     }
 
     /**

@@ -34,15 +34,4 @@ interface RequestInterface
     * @throws Exception
    */
    public function requestBatch(array $requests):array;
-
-   /**
-    * resolve host
-    *
-    * @param string $host
-    * @param int $timeout
-    *
-    * @return string
-    * @throws ApolloException
-   */
-   public function resolveHost(string $host,int $timeout):string;
 }

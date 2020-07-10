@@ -32,10 +32,8 @@ class ApolloRequest implements RequestInterface
                 $query = http_build_query($query);
                 $uri   = sprintf('%s?%s', $uri, $query);
             }
-            //resolve domainname
-            $ip = $this->resolveHost($host,$timeout);
             // Request
-            $client = new Client($ip, $port);
+            $client = new Client($host, $port);
             $client->set(['timeout' => $timeout]);
             $client->get($uri);
             $body   = $client->body;
@@ -51,9 +49,9 @@ class ApolloRequest implements RequestInterface
                 throw new ApolloException(
                     sprintf(
                         'Request timeout!(host=%s, port=%d timeout=%d)',
-                        $this->host,
-                        $this->port,
-                        $this->timeout
+                        $host,
+                        $port,
+                        $timeout
                     )
                 );
             }
@@ -95,22 +93,5 @@ class ApolloRequest implements RequestInterface
       }
       $wg->wait();
       return $result;
-    }
-
-    /**
-     * @inheritDoc
-    */
-    public  function resolveHost(string $host,int $timeout):string{
-        //fetch ip from cache
-        $ip = apcu_fetch(self::HOST_TO_IP);
-        if(!$ip){
-            $ip = System::dnsLookup($host,$timeout);
-            if($ip){apcu_store(self::HOST_TO_IP,$ip);}
-            else{
-                Helper::getLogger()->error("DNS ERROR is IP IS NULL");
-                throw new ApolloException("dns error");
-            }
-        }
-        return $ip;
     }
 }
