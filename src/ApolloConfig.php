@@ -24,6 +24,33 @@ class ApolloConfig implements ConfigCenterInterface
     */
     private $request;
 
+    /**
+     * tickId
+     * @var int
+    */
+    private $tickId;
+
+    /**
+     * @return bool
+     */
+    public function isRunning(): bool
+    {
+        return $this->running;
+    }
+
+    /**
+     * @param bool $running
+     */
+    public function setRunning(bool $running): void
+    {
+        $this->running = $running;
+    }
+
+    /**
+     * @var bool
+    */
+    private $running = false;
+
 
     public function __construct(ApolloInfo $apolloInfo,ApolloRequest $request)
     {
@@ -117,6 +144,7 @@ class ApolloConfig implements ConfigCenterInterface
         // Client ip and release key
         $query['appId']   = $appid;
         $query['cluster'] = $clusterName;
+        $this->running = true;//start to run
 
         // Init $notifications
         if (empty($notifications)) {
@@ -129,7 +157,7 @@ class ApolloConfig implements ConfigCenterInterface
         }
 
         // start Long poll
-        while (true) {
+        while ($this->running) {
             $updateNamespaceNames   = [];
             $query['notifications'] = json_encode(array_values($notifications));
 
@@ -161,6 +189,7 @@ class ApolloConfig implements ConfigCenterInterface
             //user callback
             if($callback) {$callback($updateConfigs);}
         }
+        return;
     }
 
     /**
@@ -168,7 +197,11 @@ class ApolloConfig implements ConfigCenterInterface
     */
     public function Timer():void {
         $callback = $this->apolloInfo->getCallback();
-        Timer::tick($this->apolloInfo->getTimer(),function() use ($callback){
+        $this->tickId = Timer::tick($this->apolloInfo->getTimer(),function() use ($callback){
+            if(!$this->running){
+                Timer::clear($this->tickId);
+                return;
+            }
             $appid       = $this->apolloInfo->getAppId();
             $clusterName = $this->apolloInfo->getClusterName();
             $host = $this->apolloInfo->getHost();
@@ -177,6 +210,7 @@ class ApolloConfig implements ConfigCenterInterface
             $notifications = $this->apolloInfo->getNotifications();
             $clientip = $this->apolloInfo->getClientip();
             $timeout = $this->apolloInfo->getHoldTimeout();
+            $this->running = true;//start to run
 
             // Client ip and release key
             $query['appId']   = $appid;
@@ -295,5 +329,15 @@ class ApolloConfig implements ConfigCenterInterface
            $res[$val['namespaceName']]['cache'] = $cacheRes;
        }
        Helper::getLogger()->info("update file and cache result ".json_encode($res).' at time '.date('Y-m-d H:i:s'));
+    }
+
+    /**
+     * destruct
+    */
+    public function __destruct()
+    {
+        $this->apolloInfo = null;
+        $this->request = null;
+        $this->tickId = null;
     }
 }

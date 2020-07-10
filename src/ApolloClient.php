@@ -9,7 +9,6 @@ use Swoole\Process\Pool;
 use Swoole\Coroutine;
 use Swoole\Process;
 use Throwable;
-use Swoole\Server;
 use function register_shutdown_function;
 use function error_get_last;
 
@@ -20,7 +19,6 @@ class ApolloClient
      * version
     */
     const VERSION = "0.1";
-
     /**
      *  workerNum
     */
@@ -71,11 +69,11 @@ class ApolloClient
         if($workerId==0){
             //start listen process
             swoole_set_process_name(self::LONG_PULL_PROCESS_NAME);
-            $this->apolloConfig->Listen(null);
+            $this->apolloConfig->Listen();
         }else{
             //start timer process
             swoole_set_process_name(self::CRON_PROCESS_NAME);
-            $this->apolloConfig->Timer(null);
+            $this->apolloConfig->Timer();
         }
     }
 
@@ -95,12 +93,14 @@ class ApolloClient
     */
     public function start(ApolloConfig $apolloConfig):void{
         try{
+            //daemon
+            Process::daemon(false,false);
             //init pool
             $this->pool = new Pool($this->workerNum,0,0,true);
             //set config
             Coroutine::set([
-                'hook_flags' => SWOOLE_HOOK_FILE,
-                'max_coroutine' =>3000,
+                'hook_flags' => SWOOLE_HOOK_ALL,
+                'max_coroutine' =>30000,
                 'stack_size' => 4096,
                 'log_level'  =>SWOOLE_LOG_ERROR,
                 'socket_connect_timeout' => 10,
@@ -155,9 +155,9 @@ class ApolloClient
             }
         });
         //handler signal
-        process::signal(\SIGTERM,function($signo){
-            Helper::getLogger()->error("process has been killed by signo ".$signo);
-            exit(0);
+        $apolloConfig = $this->apolloConfig;
+        Process::signal(SIGTERM,function($signo) use($workerId,$apolloConfig){
+            $apolloConfig->setRunning(false);
         });
     }
 }
