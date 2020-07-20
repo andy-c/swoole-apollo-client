@@ -23,7 +23,7 @@ swoole-apollo-client 是一款基于swoole process是实现的携程apollo客户
 
 ## 运行
 ```
-cd ./swoole-apollo-client/src && php index.php
+cd ./swoole-apollo-client && php index.php
 ```
 
 
