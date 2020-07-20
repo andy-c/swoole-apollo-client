@@ -9,7 +9,7 @@ class ApolloInfo
     /**
      * @var string
      */
-    private $host = '172.16.10.184';
+    private $host = '127.0.0.1';
 
     /**
      * @var int
@@ -19,7 +19,7 @@ class ApolloInfo
     /**
      * @var string
      */
-    private $appId = 'jv_monitor';
+    private $appId = 'demo';
 
     /**
      * @var string
