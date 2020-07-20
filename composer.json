@@ -15,13 +15,15 @@
     ],
     "require": {
         "php": ">=7.0",
-        "ext-swoole": "*",
-        "ext-apcu": "*",
+        "ext-swoole": ">=4.4",
+        "ext-apcu": ">=5.1.12",
         "monolog/monolog": "^1.25"
     },
     "autoload": {
         "psr-4": {
             "ApolloService\\": "src/"
         }
-    }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }
