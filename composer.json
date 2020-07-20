@@ -1,5 +1,5 @@
 {
-	"name": "andy-c/php-apollo-client",
+	"name": "andy-c/swoole-apollo-client",
     "type": "library",
     "keywords": [
         "apollo php client"
