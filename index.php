@@ -14,8 +14,6 @@ define("FILE_DIR","/opt/apollo");
 //instance apolloInfo and request
 $apolloRequest = new ApolloRequest();
 $apollo = new ApolloInfo();
-$apollo->setHost("apollo.com");
-$apollo->setPort(8090);
 //inject
 ApolloClient::getInstance()->start(new ApolloConfig($apollo,$apolloRequest));
 
