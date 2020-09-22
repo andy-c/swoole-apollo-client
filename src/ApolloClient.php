@@ -50,6 +50,12 @@ class ApolloClient
     private $apolloConfig;
 
     /**
+     * master pid file
+     * @var string
+    */
+    const MASTER_PID_FILE='/opt/apollo_master.pid';
+
+    /**
      * callable
     */
 
@@ -114,6 +120,8 @@ class ApolloClient
             $this->apolloConfig = $apolloConfig;
             //set master name
             swoole_set_process_name("apollo-client-master");
+            //save master pid to file
+            file_put_contents(self::MASTER_PID_FILE,getmypid());
             //worker start
             $this->pool->on("WorkerStart",function($pool,$workerId){
                 $this->onWorkerStart($pool,$workerId);
