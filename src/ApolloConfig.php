@@ -125,7 +125,7 @@ class ApolloConfig implements ConfigCenterInterface
                 return $this->pullWithOutCache($namespace, '', $clientip);
             };
         }
-        return $this->request->requestBatch($requests, $this->apolloInfo->getPullTimeout());
+        return $this->request->requestBatch($requests);
     }
 
     /**
